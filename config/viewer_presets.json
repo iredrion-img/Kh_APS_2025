@@ -1,0 +1,26 @@
+[
+  {
+    "category": "Revit 벽",
+    "keywords": ["벽", "wall", "벽면", "partition"]
+  },
+  {
+    "category": "Revit 기둥",
+    "keywords": ["기둥", "column", "pilar", "pillar"]
+  },
+  {
+    "category": "Revit 슬래브",
+    "keywords": ["슬래브", "slab", "바닥", "deck"]
+  },
+  {
+    "category": "Revit 천장",
+    "keywords": ["천장", "ceiling"]
+  },
+  {
+    "category": "Revit 창",
+    "keywords": ["창", "창문", "window"]
+  },
+  {
+    "category": "Revit 문",
+    "keywords": ["문", "door"]
+  }
+]

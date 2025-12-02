@@ -1,0 +1,456 @@
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    font-family: ArtifaktElement;
+}
+
+:root {
+    --chat-panel-width: clamp(360px, 32vw, 520px);
+    --chat-panel-current: 0px;
+    --sidebar-width: 25%;
+    --sidebar-min-width: 220px;
+    --sidebar-max-width: 520px;
+    --schedule-panel-height: 0px;
+}
+
+body.chat-open {
+    --chat-panel-current: var(--chat-panel-width);
+}
+
+#header, #sidebar, #preview {
+    position: absolute;
+}
+
+#header {
+    height: 4em;
+    width: 100%;
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: space-between;
+    align-items: center;
+    background: black;    /* ← 이 줄 추가 */
+    color: white;         /* ← 이 줄도 추가(글씨를 흰색으로) */
+}
+
+#header .logo {
+    height: 3em;      /* 헤더 높이(5em)보다 조금 작게, 원하는 크기로 조정 */
+    width: auto;      /* 이미지 비율 자동 유지 */
+    margin-left: 1em; /* 좌측 여백(옵션) */
+}
+ 
+
+#sidebar {
+    width: var(--sidebar-width);
+    left: 0;
+    top: 4em;
+    bottom: 0;
+    overflow-y: auto;
+}
+
+#preview {
+    left: var(--sidebar-width);
+    right: var(--chat-panel-current);
+    top: 4em;
+    bottom: var(--schedule-panel-height, 0px);
+    min-width: 480px;
+}
+
+#login {
+    font-family: ArtifaktElement;
+    font-size: 1em;
+}
+
+#header .title {
+    height: auto;
+    margin-left: 0.6em;
+    margin-right: auto;
+    font-family: 'Nanum Gothic', sans-serif;
+    font-weight: 700;
+    font-size: 1.7em;
+}
+
+#tree {
+    margin: 0.5em;
+}
+
+.quick-actions {
+    position: absolute;
+    top: 4.5em;
+    right: 1.5em;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75em;
+    z-index: 500;
+    align-items: center;
+}
+
+.quick-actions button {
+    border: none;
+    border-radius: 999px;
+    padding: 0.55em 1.4em;
+    font-size: 0.95em;
+    font-family: 'Nanum Gothic', sans-serif;
+    font-weight: 700;
+    color: #fff;
+    background: rgba(17, 24, 39, 0.85);
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.quick-actions button:disabled {
+    opacity: 0.6;
+    cursor: progress;
+}
+
+.quick-actions button:hover:not(:disabled) {
+    background: rgba(59, 130, 246, 0.95);
+    transform: translateY(-1px);
+}
+
+.quick-actions .category-filter {
+    display: flex;
+    gap: 0.5em;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 999px;
+    padding: 0.3em 0.8em;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.15);
+}
+
+.quick-actions select {
+    border: none;
+    border-radius: 999px;
+    padding: 0.35em 0.8em;
+    font-size: 0.85em;
+    font-family: 'Nanum Gothic', sans-serif;
+    background: transparent;
+    min-width: 12em;
+}
+
+.quick-actions select:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+#sidebarResizer {
+    position: absolute;
+    top: 4em;
+    bottom: 0;
+    left: var(--sidebar-width);
+    width: 8px;
+    transform: translateX(-4px);
+    cursor: col-resize;
+    z-index: 600;
+    background: transparent;
+}
+
+#sidebarResizer::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 48px;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.9);
+}
+
+body.is-resizing {
+    user-select: none;
+    cursor: col-resize;
+}
+
+#chatResizer {
+    position: fixed;
+    top: 4em;
+    bottom: 0;
+    right: var(--chat-panel-current);
+    width: 10px;
+    transform: translateX(5px);
+    cursor: col-resize;
+    z-index: 1100;
+    display: none;
+}
+
+#chatResizer::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 60px;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.9);
+}
+
+body.chat-open #chatResizer {
+    display: block;
+}
+
+@media (max-width: 768px) {
+    #sidebar {
+        width: 100%;
+        top: 4em;
+        bottom: 75%;
+    }
+    #preview {
+        left: 0;
+        right: 0;
+        min-width: 0;
+        top: 25%;
+        bottom: 0;
+    }
+
+    .quick-actions {
+        position: fixed;
+        top: calc(4em + 8px);
+        right: 12px;
+        flex-direction: column;
+        align-items: flex-end;
+    }
+
+    #sidebarResizer,
+    #chatResizer {
+        display: none !important;
+    }
+}
+
+.icon-hub:before {
+    background-image: url(https://raw.githubusercontent.com/primer/octicons/main/icons/apps-16.svg); /* or https://raw.githubusercontent.com/primer/octicons/main/icons/stack-16.svg */
+    background-size: cover;
+}
+
+.icon-project:before {
+    
+    background-image: url(https://raw.githubusercontent.com/primer/octicons/main/icons/project-16.svg); /* or https://raw.githubusercontent.com/primer/octicons/main/icons/organization-16.svg */
+    background-size: cover;
+}
+
+.icon-my-folder:before {
+    background-image: url(https://raw.githubusercontent.com/primer/octicons/main/icons/file-directory-16.svg);
+    background-size: cover;
+}
+
+.icon-item:before {
+    background-image: url(https://raw.githubusercontent.com/primer/octicons/main/icons/file-16.svg);
+    background-size: cover;
+}
+
+.icon-version:before {
+    background-image: url(https://raw.githubusercontent.com/primer/octicons/main/icons/clock-16.svg);
+    background-size: cover;
+}
+
+body.chat-open .quick-actions {
+    right: calc(var(--chat-panel-current) + 1.5em);
+}
+
+#schedulePanel {
+    position: absolute;
+    left: calc(var(--sidebar-width) + 24px);
+    right: calc(var(--chat-panel-current) + 24px);
+    bottom: 24px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 18px 48px rgba(15, 23, 42, 0.28);
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 550;
+    max-height: 45vh;
+    backdrop-filter: blur(4px);
+}
+
+#schedulePanel[data-visible="true"] {
+    display: flex;
+}
+
+#schedulePanel .schedule-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    border-bottom: 1px solid #e5e7eb;
+    background: rgba(248, 250, 252, 0.95);
+}
+
+#schedulePanel .schedule-text #scheduleTitle {
+    font-weight: 700;
+    font-size: 1rem;
+    color: #0f172a;
+}
+
+#schedulePanel .schedule-text #scheduleDescription {
+    font-size: 0.85rem;
+    color: #475569;
+    margin-top: 2px;
+}
+
+#schedulePanel .schedule-actions {
+    display: flex;
+    gap: 6px;
+}
+
+#schedulePanel .schedule-actions button {
+    border: none;
+    border-radius: 8px;
+    background: #e2e8f0;
+    color: #0f172a;
+    padding: 4px 10px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+#schedulePanel .schedule-actions button:hover {
+    background: #cbd5f5;
+}
+
+#schedulePanel .schedule-body {
+    padding: 12px 18px 16px 18px;
+    display: flex;
+    flex-direction: column;
+}
+
+#schedulePanel.collapsed .schedule-body {
+    display: none;
+}
+
+.schedule-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 28vh;
+}
+
+#schedulePanel table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    color: #0f172a;
+}
+
+#schedulePanel thead {
+    background: #f1f5f9;
+}
+
+#schedulePanel th,
+#schedulePanel td {
+    padding: 8px 10px;
+    border: 1px solid #e2e8f0;
+    text-align: left;
+}
+
+#schedulePanel tbody tr:nth-child(2n) {
+    background: #f8fafc;
+}
+
+#scheduleEmptyState {
+    text-align: center;
+    color: #94a3b8;
+    font-size: 0.85rem;
+    padding: 16px 0;
+    display: none;
+}
+
+#schedulePanel[data-empty="true"] #scheduleEmptyState {
+    display: block;
+}
+
+#schedulePanel[data-empty="true"] table {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    #schedulePanel {
+        left: 16px;
+        right: 16px;
+    }
+}
+
+/* bottom summary panel */
+.bottom-summary-panel {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 8px;
+    width: calc(100% - 40px);
+    max-width: 1200px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+    z-index: 50;
+    padding: 10px 12px;
+}
+
+.bottom-summary-panel.hidden {
+    display: none;
+}
+
+.bottom-summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.bottom-summary-title {
+    font-weight: 700;
+    font-size: 15px;
+}
+
+.bottom-summary-desc {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 2px;
+}
+
+.bottom-summary-close {
+    font-size: 12px;
+    border: 1px solid #d1d5db;
+    background: #f9fafb;
+    padding: 4px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.bottom-summary-table-wrap {
+    max-height: 220px;
+    overflow: auto;
+}
+
+.bottom-summary-table-wrap table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.bottom-summary-table-wrap th,
+.bottom-summary-table-wrap td {
+    border: 1px solid #e5e7eb;
+    padding: 6px 8px;
+    text-align: right;
+}
+
+.bottom-summary-table-wrap th:first-child,
+.bottom-summary-table-wrap td:first-child {
+    text-align: left;
+}

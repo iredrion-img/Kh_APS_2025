@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en">
+ 
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/x-icon" href="kunhwa_icon.ico">
+  <link rel="stylesheet" href="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/inspire-tree-dom@4.0.6/dist/inspire-tree-light.min.css">
+  <link rel="stylesheet" href="/main.css">
+  <link href="https://fonts.googleapis.com/css?family=Nanum+Gothic:700&display=swap" rel="stylesheet">
+  <title>Kunhwa Platform Services</title>
+ 
+  <!-- AI UI 전용 (임시 인라인 스타일) -->
+  <style>
+    /* 초기 상태 제어: data-open=true 에서만 보이도록 */
+    #chatBox { display: none; }
+    #chatBox[data-open="true"] { display: flex; }
+ 
+    /* 플로팅 KH CI 버튼 — 디자인 A(화이트 버튼) */
+    .kh-ci-btn {
+      position: fixed;
+      bottom: 22px;
+      right: 22px;
+      width: 56px;
+      height: 56px;
+      border: 1px solid #e5e7eb;
+      border-radius: 50%;
+      background: #ffffff;               /* 화이트 배경 → 로고 흰 배경과 자연스럽게 */
+      box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+      cursor: pointer;
+      z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0;
+    }
+    .kh-ci-btn:focus { outline: none; }
+    .kh-ci-img { width: 30px; height: 30px; display: block; }
+ 
+    /* 채팅창 컨테이너 */
+    #chatBox {
+      position: fixed;
+      top: 4em;
+      right: 0;
+      bottom: 0;
+      width: var(--chat-panel-current);
+      background: #fff;
+      border-radius: 0;
+      border-left: 1px solid #e5e7eb;
+      box-shadow: -16px 0 32px rgba(0,0,0,0.22);
+      overflow: hidden;
+      flex-direction: column;
+      z-index: 1000;
+    }
+
+    body.chat-open #chatBox {
+      display: flex;
+    }
+
+    body.chat-open #openChatBtn {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+ 
+    /* 헤더 */
+    #chatBox .chat-header {
+      height: 44px;
+      background: #111827;
+      color: #fff;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 12px;
+      font-weight: 700;
+      font-size: 14px;
+    }
+    #chatBox .close-btn {
+      background: transparent; border: 0; color: #fff; font-size: 22px; cursor: pointer;
+    }
+ 
+    /* 헤더 유틸 */
+    #chatBox .header-utils {
+      background: #f3f4f6;
+      padding: 6px 10px;
+      font-size: 12px;
+      color: #374151;
+      display: flex; align-items: center; gap: 8px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    #chatBox .header-utils button {
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 6px;
+      padding: 4px 8px; cursor: pointer; font-size: 12px;
+    }
+    #chatBox .header-utils .sep { color: #9ca3af; }
+    #chatBox .status-pill {
+      margin-left: auto;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 11px;
+      color: #0f172a;
+      background: #dbeafe;
+      border: 1px solid #bfdbfe;
+    }
+    #chatBox .status-pill[data-state="busy"] {
+      background: #fde68a;
+      border-color: #fcd34d;
+      color: #78350f;
+    }
+ 
+    /* 날짜 영역 */
+    #chatBox .chat-date {
+      padding: 8px 12px;
+      border-bottom: 1px solid #e5e7eb;
+      background: #fafafa;
+    }
+    #chatBox .date-row { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+    #chatBox .date-icon { width: 18px; height: 18px; }
+    #chatBox .date-title { font-weight: 700; color: #111827; font-size: 13px; }
+    #chatBox .date-text { color: #6b7280; font-size: 12px; }
+ 
+    /* 메시지 영역 */
+    #chatArea {
+      flex: 1;
+      padding: 12px;
+      overflow-y: auto;
+      background: #ffffff;
+    }
+ 
+    /* 입력 영역 */
+    #chatBox .chat-input-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px;
+      border-top: 1px solid #e5e7eb;
+      background: #fafafa;
+    }
+    #chatBox .file-btn {
+      width: 32px; height: 32px; border-radius: 6px; border: 1px solid #e5e7eb; background: #fff; cursor: pointer;
+    }
+    #fileInput { display: none; }
+    #chatBox .input-box {
+      flex: 1; height: 34px; border: 1px solid #e5e7eb; border-radius: 6px; padding: 0 10px; outline: none;
+    }
+    #chatBox .send-btn {
+      width: 38px; height: 38px; border-radius: 50%; border: none; background: #111827; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+ 
+    /* 리사이즈 핸들 (향후 기능용) */
+    #chatBox .resize-handle {
+      position: absolute; width: 16px; height: 16px; right: 4px; bottom: 4px;
+      background: linear-gradient(135deg, transparent 50%, #d1d5db 50%);
+      pointer-events: none;
+    }
+ 
+    /* 반응형 */
+    @media (max-width: 640px) {
+      #chatBox {
+        width: calc(100% - 32px);
+        left: 16px;
+        right: 16px;
+        top: 4em;
+        height: calc(100vh - 4em - 24px);
+        border-radius: 16px;
+      }
+    }
+ 
+    /* 디자인 B(파란 원 버튼)로 바꾸고 싶으면 아래를 대신 사용
+    .kh-ci-btn {
+      background: #0ea5e9; border: none;
+    }
+    .kh-ci-img { width: 30px; height: 30px; border-radius: 50%; overflow: hidden; }
+    */
+  </style>
+  <!-- Kakao-style chat overrides -->
+  <style>
+    #chatBox {
+      background: linear-gradient(180deg, #f7f8fb 0%, #f2f3f7 100%);
+      border-left: 1px solid #e5e7eb;
+      box-shadow: -16px 0 32px rgba(0,0,0,0.22);
+    }
+
+    #chatBox .chat-header {
+      height: 48px;
+      padding: 0 14px;
+      letter-spacing: -0.01em;
+    }
+
+    #chatBox .header-utils {
+      padding: 8px 12px;
+      gap: 8px;
+    }
+    #chatBox .header-utils button {
+      border-radius: 8px;
+      padding: 5px 10px;
+      box-shadow: 0 6px 14px rgba(0,0,0,0.04);
+    }
+    #chatBox .status-pill {
+      padding: 3px 12px;
+    }
+
+    #chatArea {
+      flex: 1;
+      padding: 14px 14px 18px 14px;
+      background: transparent;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .chat-thread {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .chat-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+    }
+    .chat-row.assistant { justify-content: flex-start; }
+    .chat-row.user { justify-content: flex-end; }
+
+    .chat-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: #111827;
+      box-shadow: 0 6px 14px rgba(0,0,0,0.06);
+    }
+    .chat-avatar.assistant {
+      background: #e5e7eb;
+      color: #111827;
+      border-color: #d1d5db;
+    }
+
+    .chat-bubble {
+      max-width: 70%;
+      padding: 10px 12px;
+      border-radius: 18px;
+      font-size: 13px;
+      line-height: 1.5;
+      box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .chat-row.assistant .chat-bubble {
+      background: #f2f3f5;
+      color: #111827;
+      border-top-left-radius: 8px;
+      border-top-right-radius: 18px;
+    }
+    .chat-row.user .chat-bubble {
+      background: #ffe84a;
+      color: #111827;
+      border-top-right-radius: 8px;
+      border-top-left-radius: 18px;
+    }
+
+    .chat-sources {
+      margin: 8px 0 0 0;
+      padding: 0;
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .chat-sources li {
+      font-size: 12px;
+      color: #4b5563;
+      background: #e5e7eb;
+      border-radius: 10px;
+      padding: 6px 8px;
+    }
+
+    .chat-loading {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .chat-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #9ca3af;
+      animation: blink 1s ease-in-out infinite;
+    }
+    .chat-dot:nth-child(2) { animation-delay: 0.15s; }
+    .chat-dot:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes blink {
+      0%, 100% { opacity: 0.2; transform: translateY(0); }
+      50% { opacity: 1; transform: translateY(-2px); }
+    }
+
+    #chatBox .chat-input-row {
+      gap: 10px;
+      padding: 10px 12px;
+      background: #f8f9fb;
+    }
+    #chatBox .file-btn {
+      width: 36px; height: 36px; border-radius: 10px; border: 1px solid #e5e7eb; background: #fff;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.05);
+    }
+    #chatBox .input-box {
+      height: 38px; border-radius: 12px; padding: 0 12px;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.04);
+    }
+    #chatBox .send-btn {
+      width: 40px; height: 40px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.12);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    #chatBox .send-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 18px rgba(0,0,0,0.16);
+    }
+
+    @media (max-width: 640px) {
+      .chat-bubble { max-width: 82%; }
+    }
+  </style>
+</head>
+ 
+<script type="module" src="/assistant-frontend.js"></script>
+ 
+<body>
+  <!-- 기존 헤더/트리/뷰어 -->
+  <div id="header">
+    <img class="logo" src="KH_logo.png" alt="Kunhwa">
+    <span class="title">Kunhwa Platform Service</span>
+    <button id="login" style="visibility: hidden;">Login</button>
+  </div>
+  <div id="sidebar"><div id="tree"></div></div>
+  <div id="sidebarResizer" role="separator" aria-label="프로젝트 트리 크기 조절"></div>
+  <div id="preview"></div>
+  <!-- Viewer Container -->
+  <div id="viewerContainer"></div>
+
+  <!-- ✅ Bottom Summary Panel -->
+  <div id="bottomSummaryPanel" class="bottom-summary-panel hidden">
+    <div class="bottom-summary-header">
+      <div>
+        <div id="bottomSummaryTitle" class="bottom-summary-title">요약 표</div>
+        <div id="bottomSummaryDesc" class="bottom-summary-desc"></div>
+      </div>
+      <button id="bottomSummaryClose" class="bottom-summary-close">닫기</button>
+    </div>
+
+    <div id="bottomSummaryTableWrap" class="bottom-summary-table-wrap"></div>
+  </div>
+
+  <div id="quickActions" class="quick-actions" aria-label="모델 빠른 필터">
+    <button id="btnResetView" type="button">전체 모델 보기</button>
+    <div class="category-filter">
+      <label for="categoryFilterSelect" class="sr-only">카테고리 선택</label>
+      <select id="categoryFilterSelect" aria-label="모델 카테고리 선택">
+        <option value="">카테고리를 선택하세요</option>
+      </select>
+      <button id="btnApplyCategory" type="button">선택 카테고리 보기</button>
+    </div>
+    <button id="btnExportMeta" type="button" style="margin-left: 8px; background:#4b5563; color:white; border:none; border-radius:4px; cursor:pointer;">
+      📥 AI 학습용 데이터 추출
+    </button>
+  </div>
+
+  <!-- Schedule Table Panel -->
+  <section id="schedulePanel" aria-live="polite" data-visible="false">
+    <div class="schedule-header">
+      <div class="schedule-text">
+        <div id="scheduleTitle">일람표</div>
+        <div id="scheduleDescription">요청한 표 데이터가 여기에 표시됩니다.</div>
+      </div>
+      <div class="schedule-actions">
+        <button id="scheduleCollapseBtn" type="button" aria-label="표 접기">접기</button>
+        <button id="scheduleCloseBtn" type="button" aria-label="표 닫기">닫기</button>
+      </div>
+    </div>
+    <div class="schedule-body">
+      <div class="schedule-table-wrapper">
+        <table>
+          <thead id="scheduleTableHead"></thead>
+          <tbody id="scheduleTableBody"></tbody>
+        </table>
+        <div id="scheduleEmptyState">표시할 데이터가 없습니다.</div>
+      </div>
+    </div>
+  </section>
+ 
+  <!-- KH CI 아이콘 버튼 -->
+  <button id="openChatBtn" class="kh-ci-btn" title="AI 파트너 열기" aria-label="AI Partner">
+    <img src="kunhwa_icon-7.png" alt="Kunhwa 아이콘" class="kh-ci-img">
+  </button>
+ 
+  <div id="chatResizer" role="separator" aria-label="AI 대화창 크기 조절"></div>
+  <!-- AI 대화창 (초기 닫힘: data-open=false) -->
+  <div id="chatBox" role="dialog" aria-modal="false" aria-label="R&D Center Assistant" data-open="false">
+    <div class="chat-header">
+      <span class="header-left">Kunhwa AI 파트너</span>
+      <button class="close-btn" title="닫기" aria-label="Close">&times;</button>
+    </div>
+ 
+    <div class="header-utils">
+      <button id="restartBtn" title="채팅 다시 시작" type="button">⟳ 채팅 다시 시작</button>
+      <span class="sep">|</span>
+      <button id="endBtn" title="채팅 종료" type="button">✖ 채팅 종료</button>
+      <span id="chatStatus" class="status-pill" data-state="idle">준비 완료</span>
+    </div>
+ 
+    <div class="chat-date" id="chatDate">
+      <div class="date-row">
+        <img src="kunhwa_icon-7.png" alt="date-icon" class="date-icon">
+        <span class="date-title">KH AI 헬프데스크</span>
+      </div>
+      <div class="date-text" id="dateText"></div>
+    </div>
+ 
+    <div id="chatArea">
+      <div style="color:#9ca3af;font-size:13px;">※ 이후 연결 시 여기에 대화가 표시됩니다.</div>
+    </div>
+ 
+    <form id="chatForm" autocomplete="off">
+      <div class="chat-input-row">
+        <button type="button" class="file-btn" id="fileBtn" title="파일 첨부">+</button>
+        <input type="file" id="fileInput" accept="image/*,.csv,.txt,.pdf">
+        <input type="text" id="userInput" class="input-box" placeholder="무엇이든 물어보세요" autocomplete="off">
+        <button type="submit" class="send-btn" id="sendBtn" title="전송">
+          <svg width="27" height="27" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+            <circle cx="14" cy="14" r="13" fill="black"/>
+            <path d="M14 20V12M14 12l-4 4m4-4l4 4" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    </form>
+ 
+    <div class="resize-handle"></div>
+  </div>
+ 
+  <!-- 뷰어/트리 스크립트 -->
+  <script src="https://developer.api.autodesk.com/modelderivative/v2/viewers/7.*/viewer3D.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
+  <script src="https://unpkg.com/inspire-tree@4.3.1/dist/inspire-tree.js"></script>
+  <script src="https://unpkg.com/inspire-tree-dom@4.0.6/dist/inspire-tree-dom.min.js"></script>
+  <script src="/main.js" type="module"></script>
+ 
+    <!-- AI UI ?? -->
+  <script>
+    (function () {
+      const $btn     = document.getElementById('openChatBtn');
+      const $box     = document.getElementById('chatBox');
+      const $close   = $box?.querySelector('.close-btn');
+      const $dateTxt = document.getElementById('dateText');
+      const $restart = document.getElementById('restartBtn');
+      const $end     = document.getElementById('endBtn');
+
+      function setDate() {
+        const now = new Date();
+        const fmt = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        if ($dateTxt) $dateTxt.textContent = fmt;
+      }
+      setDate();
+
+      function openChat()  {
+        $box?.setAttribute('data-open', 'true');
+        document.body?.classList.add('chat-open');
+      }
+      function closeChat() {
+        $box?.setAttribute('data-open', 'false');
+        document.body?.classList.remove('chat-open');
+      }
+      function toggleChat() {
+        if (!$box) return;
+        const isOpen = $box.getAttribute('data-open') === 'true';
+        isOpen ? closeChat() : openChat();
+      }
+
+      $btn?.addEventListener('click', toggleChat);
+      $close?.addEventListener('click', closeChat);
+      $end?.addEventListener('click', closeChat);
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeChat();
+      });
+
+      // ??? ?? ?? ? ??? ?? (?? ???? assistant-frontend.js ??)
+      $restart?.addEventListener('click', () => setDate());
+    })();
+  </script>
+
+</body>
+</html>
